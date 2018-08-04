@@ -12,6 +12,12 @@ Inspired by https://github.com/schwerpunkt/munin-plugin-zfs_composition
 
 Installation is the same as for any other collectd python plugin.
 No settings necessary.
+
+Requirements:
+It might be required to set up a udev rule to grant permissions to /dev/zfs
+for the user that runs this script.
+Additionally an entry in /etc/sudoers or /etc/sudoers/.d/zfs might be 
+necessary to allow accessing the zfs/zpool binaries.
 """
 
 import time
