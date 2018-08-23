@@ -5,7 +5,7 @@ collectd-zfs_composition
 
 A collectd plugin to visualize the used space (data and snapshots) for each ZFS pool.
 
-It only calls the zpool/zfs binaries every CHECKINTERVAL seconds, 
+It only calls the zpool/zfs binaries every CHECKINTERVAL seconds,
 because some systems can't handle hammering these calls.
 
 Inspired by https://github.com/schwerpunkt/munin-plugin-zfs_composition
@@ -16,7 +16,7 @@ No settings necessary.
 Requirements:
 It might be required to set up a udev rule to grant permissions to /dev/zfs
 for the user that runs this script.
-Additionally an entry in /etc/sudoers or /etc/sudoers/.d/zfs might be 
+Additionally an entry in /etc/sudoers or /etc/sudoers/.d/zfs might be
 necessary to allow accessing the zfs/zpool binaries.
 """
 
@@ -47,7 +47,7 @@ def execAndGetStdOut(cmd, splitTab=True):
 
 def report(plugin_instance, type_instance, value):
     global PLUGIN_NAME
-    collectd.debug('{}: Reading data: {}/{} = {}'.format(
+    print('{}: Reading data: {} / {} = {}'.format(
         PLUGIN_NAME, plugin_instance, type_instance, value))
 
     collectd.Values(
@@ -61,27 +61,25 @@ def report(plugin_instance, type_instance, value):
 # for caching the output of the zfs/zpool commands:
 last_check = 0.0
 stats = []
-pools = []
 
 
 def read(data=None):
-    global PLUGIN_NAME
     global CHECKINTERVAL
     global last_check
     global stats
-    global pools
 
     # update data:
     if last_check + CHECKINTERVAL <= time.time():
-        stats = execAndGetStdOut("sudo /sbin/zfs get -Hp usedbydataset,usedbysnapshots -r | grep -v @")
-        pools = execAndGetStdOut("sudo /sbin/zpool get -Hp free")
+        stats = execAndGetStdOut("/sbin/zfs list -Hp -o name,avail,used,usedsnap,usedds -t filesystem,volume")
         last_check = time.time()
 
-    for (poolName, _, free, _) in pools:
-        pool_stats = [x for x in stats if x[0].startswith(poolName)]
-        for (dataset, key, value, _) in pool_stats:
-            report(poolName, '{}-{}'.format(dataset, key), value)
-        report(poolName, "Free", free)
+    for (name, avail, used, usedsnap, usedds) in stats:
+        poolName = name.split("/")[0]
+        if "/" not in name:
+            report(poolName, "Free", avail)
+        report(poolName, '{}-{}'.format(name, "usedbydataset"), usedds)
+        report(poolName, '{}-{}'.format(name, "usedbysnapshots"), usedsnap)
+
 
 # collectd.register_read(read, INTERVAL)
 collectd.register_read(read)
